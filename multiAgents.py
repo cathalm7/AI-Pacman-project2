@@ -14,6 +14,7 @@
 
 import random
 import util
+import math
 
 from game import Agent
 
@@ -168,8 +169,48 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
 
         "*** YOUR CODE HERE ***"
+        # Following sudo-code from book.
+        # Maximizing pacman actions (Higher the evaluation the better)
+        def maxValue(gameState, agentIndex, depth):
+            # GameOver or at the current depth
+            if gameState.isWin() or gameState.isLose() or (depth == self.depth):
+                return self.evaluationFunction(gameState)
+            
+            val = -math.inf
+            #Loop through all legal action of pacman
+            for action in gameState.getLegalActions(0):
+                # Start recursion for this action
+                val = max(val,  minValue(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth))
+            
+            return val
+        
+        # Minimize ghosts actions
+        def minValue(gameState, agentIndex, depth):
+            # GameOver or at the current depth
+            if gameState.isWin() or gameState.isLose() or (depth == self.depth):
+                return self.evaluationFunction(gameState)
+            
+            val = math.inf
+            for action in gameState.getLegalActions(agentIndex):
+                # Do every ghost agent on the cur depth
+                if agentIndex + 1 != gameState.getNumAgents():
+                    val = min(val, minValue(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth))
+                else: # Once recursion is made on every agent
+                    # Start recursion on pacman agent into another depth
+                    val = min(val, maxValue(gameState.generateSuccessor(agentIndex, action), 0, depth + 1))
 
-        util.raiseNotDefined()
+            return val
+
+        def minimax(gameState):
+            action = gameState.getLegalActions()
+            val = -math.inf
+            for act in gameState.getLegalActions(0):
+                if val < minValue(gameState.generateSuccessor(0, act), 1, 0):
+                    val = minValue(gameState.generateSuccessor(0, act), 1, 0)
+                    action = act
+            return action
+        
+        return minimax(gameState)
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -181,10 +222,65 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
+        # Following sudo-code from book.
+        # Maximizing pacman actions (Higher the evaluation the better)
+        def maxValue(gameState, agentIndex, depth, alpha, beta):
+            # GameOver or at the current depth
+            if gameState.isWin() or gameState.isLose() or depth == self.depth:
+                return self.evaluationFunction(gameState), ''
 
-        "*** YOUR CODE HERE ***"
+            # (maximized eval, corresponding action)
+            node = (-math.inf, '')
+            #Loop through all legal action of pacman
+            for action in gameState.getLegalActions(0):
+                # Start recursion for this action
+                val = max(node[0],minValue(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth,  alpha, beta)[0])
+                
+                # Only change node's action if it maximize the evaluation
+                if val != node[0]: 
+                    node = (val, action)
 
-        util.raiseNotDefined()
+                if node[0] > beta:
+                    # Prunning
+                    return node
+                alpha = max(node[0], alpha)
+
+            return node
+
+        # Minimize ghosts actions
+        def minValue(gameState, agentIndex,depth, alpha, beta):
+            # GameOver or at the current depth
+            if gameState.isWin() or gameState.isLose():
+                return self.evaluationFunction(gameState), ''
+            
+            # (miximized eval, corresponding action)
+            node = (math.inf, '')
+            #Loop through all legal action of pacman
+            for action in gameState.getLegalActions(agentIndex):
+                # Do every ghost agent on the cur depth
+                if agentIndex + 1 != gameState.getNumAgents():
+                    val = min(node[0],minValue(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth,  alpha, beta)[0])
+                else: # Once recursion is made on every agent
+                    # Start recursion on pacman agent into another depth
+                    val = min(node[0],maxValue(gameState.generateSuccessor(agentIndex, action), 0, depth + 1, alpha, beta)[0])
+
+                # Only change node's action if minimize the evaluation
+                if val != node[0]:
+                    node = (val, action)
+
+                if node[0] < alpha:
+                    # Prunning
+                    return node
+                beta = min(node[0], beta)
+
+            return node
+        
+        def alphaBeta(gameState):
+            node = maxValue(gameState, 0, 0, -math.inf, math.inf)
+            return node[1] # Return action
+        
+        return alphaBeta(gameState)
+
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):

@@ -255,7 +255,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             
             # (miximized eval, corresponding action)
             node = (math.inf, '')
-            #Loop through all legal action of pacman
+            #Loop through all legal action of ghosts
             for action in gameState.getLegalActions(agentIndex):
                 # Do every ghost agent on the cur depth
                 if agentIndex + 1 != gameState.getNumAgents():
@@ -297,8 +297,51 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
 
         "*** YOUR CODE HERE ***"
+        
+        # ExpectiMax only look at maxValue but not minValue
+        # Maximizing pacman actions (Higher the evaluation the better)
+        def maxValue(gamestate, depth, agentIndex):
+            # GameOver or at the current depth
+            if gamestate.isWin() == 1 or gamestate.isLose() == 1 or (depth == self.depth):
+                return self.evaluationFunction(gamestate)
+ 
+            val = -math.inf
+            #Loop through all legal action of pacman
+            for action in gamestate.getLegalActions(0):
+                val =  max(val, expectimax(gamestate.generateSuccessor(0,action), depth, 1))
+            return val
+        
 
-        util.raiseNotDefined()
+        def expectimax(gamestate, depth, agentIndex):
+            # GameOver or at the current depth
+            if gamestate.isWin() or gamestate.isLose() or (depth == self.depth):
+                return self.evaluationFunction(gamestate)
+            
+            # specificity of expectiminimax
+            chance = 0
+            probAction = 1 / len(gamestate.getLegalActions(agentIndex))
+
+            if agentIndex+1 != gamestate.getNumAgents():
+                for action in gamestate.getLegalActions(agentIndex):
+                     # Start recursion on different agent into same depth
+                    chance += probAction * expectimax(gamestate.generateSuccessor(agentIndex, action), depth, agentIndex + 1)
+            else: # Once recursion is made on every agent
+                # Start recursion on pacman agent into another depth
+                for action in gamestate.getLegalActions(agentIndex):
+                    chance += probAction * maxValue(gamestate.generateSuccessor(agentIndex, action), depth + 1, 0)
+
+            return chance
+        
+        def findAction(gameState):
+            optAction = ''
+            p_val = -math.inf
+            for action in gameState.getLegalActions():
+                if expectimax(gameState.generateSuccessor(0, action), 0, 1) > p_val:
+                    p_val = expectimax(gameState.generateSuccessor(0, action), 0, 1)
+                    optAction = action
+            return optAction   
+
+        return findAction(gameState)     
 
 
 def betterEvaluationFunction(currentGameState):
@@ -306,12 +349,47 @@ def betterEvaluationFunction(currentGameState):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION: Same algo as the first eval function
+                 See comments below for explaination
     """
+    newPos = currentGameState.getPacmanPosition()
+    newFood = currentGameState.getFood()
+    newGhostStates = currentGameState.getGhostStates()
+    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
     "*** YOUR CODE HERE ***"
+    #Set up stating score from previous state
+    score = currentGameState.getScore()
 
-    util.raiseNotDefined()
+
+    foodDistances = []
+    for food in newFood.asList():
+        #Get manhattanDistance between new position and every food
+        foodDistances.append(util.manhattanDistance(newPos, food))
+    if len(foodDistances):
+        # if foodDistances not empty
+        # food score is the mean of food distance from new position
+        foodScore = sum(foodDistances)/len(foodDistances)
+    else: 
+        foodScore = 1
+
+    ghostDistances = []
+    for ghost in newGhostStates:
+        #Get manhattanDistance between new position and every ghost
+        ghostDistances.append(util.manhattanDistance(newPos, ghost.getPosition()))
+
+    # The closer is the ghost, the more its dangerous
+    ghostScore = min(ghostDistances)
+    #If too close, penalized by reducing the score
+    if ghostScore <= 3:
+        ghostScore = -1
+
+    # The distance from the nearest ghost is inversely proportional 
+    #   to the mean of food distance
+    # For instance if a ghost is near but there are a lot of food around
+    #   It is worth staying around
+    score += ghostScore/foodScore
+    return score
 
 
 # Abbreviation

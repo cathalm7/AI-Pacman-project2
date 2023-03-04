@@ -349,18 +349,22 @@ def betterEvaluationFunction(currentGameState):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: Same algo as the first eval function
+    DESCRIPTION: Same base algo as the first eval function
+                    added capules into account to calculate eval score
+                        Since eating shorst is +300
                  See comments below for explaination
     """
     newPos = currentGameState.getPacmanPosition()
     newFood = currentGameState.getFood()
+    newCapsule = currentGameState.getCapsules()
     newGhostStates = currentGameState.getGhostStates()
     newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
     "*** YOUR CODE HERE ***"
     #Set up stating score from previous state
     score = currentGameState.getScore()
-
+    # Initiate Capsule score to 0
+    capsuleScore = 0
 
     foodDistances = []
     for food in newFood.asList():
@@ -370,7 +374,12 @@ def betterEvaluationFunction(currentGameState):
         # if foodDistances not empty
         # food score is the mean of food distance from new position
         foodScore = sum(foodDistances)/len(foodDistances)
+        # Add the closest food 
+        #   If ghort is where mean food is, Pacman wont move
+        #   This helps solving pacman getting stuck
+        foodScore += min(foodDistances)
     else: 
+        # So we dont divide by 0
         foodScore = 1
 
     ghostDistances = []
@@ -380,15 +389,30 @@ def betterEvaluationFunction(currentGameState):
 
     # The closer is the ghost, the more its dangerous
     ghostScore = min(ghostDistances)
-    #If too close, penalized by reducing the score
-    if ghostScore <= 3:
-        ghostScore = -1
+
+    # If ghost eatable
+    if newScaredTimes[0] != 0:
+        # If ghost not to far
+        if ghostScore <= 9:
+            # Reward by going toward ghost
+            # Eating  ghost = +300 in game score
+            ghostScore += 1
+    # If not ghost eatable
+    else:
+        if ghostScore <= 3:
+            #If too close, penalized by reducing the score
+            ghostScore += -1
+        # encourage going toward closest capsule
+        if newCapsule:
+            capsuleScore += sum(min(newCapsule))
 
     # The distance from the nearest ghost is inversely proportional 
     #   to the mean of food distance
     # For instance if a ghost is near but there are a lot of food around
     #   It is worth staying around
-    score += ghostScore/foodScore
+
+    # Did a bit of tuning with formula to obtimaze game score
+    score += ((ghostScore*0.5)/(foodScore*4 + capsuleScore**2)**2)
     return score
 
 

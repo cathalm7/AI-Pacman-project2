@@ -185,6 +185,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
             return val
         
         # Minimize ghosts actions
+        # Handle the change of depth in recursion
         def minValue(gameState, agentIndex, depth):
             # GameOver or at the current depth
             if gameState.isWin() or gameState.isLose() or (depth == self.depth):
@@ -208,6 +209,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
                 if val < minValue(gameState.generateSuccessor(0, act), 1, 0):
                     val = minValue(gameState.generateSuccessor(0, act), 1, 0)
                     action = act
+            # next move is ghost so find action that minimize
             return action
         
         return minimax(gameState)
@@ -230,6 +232,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 return self.evaluationFunction(gameState), ''
 
             # (maximized eval, corresponding action)
+                #Using the node helps to manipulate action
             node = (-math.inf, '')
             #Loop through all legal action of pacman
             for action in gameState.getLegalActions(0):
@@ -247,7 +250,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
             return node
 
-        # Minimize ghosts actions
+        # Minimaze ghosts actions
         def minValue(gameState, agentIndex,depth, alpha, beta):
             # GameOver or at the current depth
             if gameState.isWin() or gameState.isLose():
@@ -302,7 +305,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         # Maximizing pacman actions (Higher the evaluation the better)
         def maxValue(gamestate, depth, agentIndex):
             # GameOver or at the current depth
-            if gamestate.isWin() == 1 or gamestate.isLose() == 1 or (depth == self.depth):
+            if gamestate.isWin() or gamestate.isLose() or (depth == self.depth):
                 return self.evaluationFunction(gamestate)
  
             val = -math.inf

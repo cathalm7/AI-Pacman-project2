@@ -168,51 +168,61 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
 
-        "*** YOUR CODE HERE ***"
-        # Following sudo-code from book.
-        # Maximizing pacman actions (Higher the evaluation the better)
-        def maxValue(gameState, agentIndex, depth):
-            # GameOver or at the current depth
-            if gameState.isWin() or gameState.isLose() or (depth == self.depth):
-                return self.evaluationFunction(gameState)
-            
-            val = -math.inf
-            #Loop through all legal action of pacman
-            for action in gameState.getLegalActions(0):
-                # Start recursion for this action
-                val = max(val,  minValue(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth))
-            
-            return val
-        
-        # Minimize ghosts actions
-        # Handle the change of depth in recursion
+        "*** YOUR CODE HERE ***"     
+        def baseCase(gameState, depth):
+                # Base Case - Game is Over or reached max depth
+                # Stop recursion if any is true
+                return gameState.isWin() or gameState.isLose() or (depth == self.depth)  
+
+        def minimax(gameState, agentIndex, depth):
+            if baseCase(gameState, depth):
+                return self.evaluationFunction(gameState), ''
+                
+            elif agentIndex == 0:
+                # Want to maxize Pacman (evalScore the hight the better)
+                node = maxValue(gameState, agentIndex, depth)
+            else:
+                #Minimize the ghosts actions
+                node = minValue(gameState, agentIndex, depth)
+            return node
+
         def minValue(gameState, agentIndex, depth):
-            # GameOver or at the current depth
-            if gameState.isWin() or gameState.isLose() or (depth == self.depth):
-                return self.evaluationFunction(gameState)
-            
             val = math.inf
+            act = ''
+
             for action in gameState.getLegalActions(agentIndex):
-                # Do every ghost agent on the cur depth
-                if agentIndex + 1 != gameState.getNumAgents():
-                    val = min(val, minValue(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth))
-                else: # Once recursion is made on every agent
-                    # Start recursion on pacman agent into another depth
-                    val = min(val, maxValue(gameState.generateSuccessor(agentIndex, action), 0, depth + 1))
+                if agentIndex == gameState.getNumAgents() - 1:
+                    # Recursed in All agent. Back to pacman in new depth
+                    node = minimax(gameState.generateSuccessor(agentIndex, action), 0, depth + 1)
+                else:
+                    # Recurse in next ghost 
+                    node = minimax(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth)
 
-            return val
+                # Find action that minimize val
+                if val > node[0]:
+                    val = node[0]
+                    act = action
+            return val, act
 
-        def minimax(gameState):
-            action = gameState.getLegalActions()
+        def maxValue(gameState, agentIndex, depth):
             val = -math.inf
-            for act in gameState.getLegalActions(0):
-                if val < minValue(gameState.generateSuccessor(0, act), 1, 0):
-                    val = minValue(gameState.generateSuccessor(0, act), 1, 0)
-                    action = act
-            # next move is ghost so find action that minimize
-            return action
-        
-        return minimax(gameState)
+            act = ''
+
+            for action in gameState.getLegalActions(agentIndex):
+                if agentIndex == gameState.getNumAgents() - 1:
+                    # Recursed in All agent. Back to pacman in new depth
+                    node = minimax(gameState.generateSuccessor(agentIndex, action), 0, depth + 1)
+                else:
+                    # Recurse in next ghost 
+                    node = minimax(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth)
+
+                # Find action that maximize val
+                if val < node[0]:
+                    val = node[0]
+                    act = action
+            return val, act
+            
+        return minimax(gameState, agentIndex=0, depth=0)[1]
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -224,65 +234,71 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
-        # Following sudo-code from book.
-        # Maximizing pacman actions (Higher the evaluation the better)
-        def maxValue(gameState, agentIndex, depth, alpha, beta):
-            # GameOver or at the current depth
-            if gameState.isWin() or gameState.isLose() or depth == self.depth:
-                return self.evaluationFunction(gameState), ''
+        def baseCase(gameState, depth):
+            # Base Case - Game is Over or reached max depth
+            # Stop recursion if any is true
+            return gameState.isWin() or gameState.isLose() or (depth == self.depth)  
 
-            # (maximized eval, corresponding action)
-                #Using the node helps to manipulate action
-            node = (-math.inf, '')
-            #Loop through all legal action of pacman
-            for action in gameState.getLegalActions(0):
-                # Start recursion for this action
-                val = max(node[0],minValue(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth,  alpha, beta)[0])
+        def alphaBeta(gameState, agentIndex, depth, alpha, beta):
+            if baseCase(gameState, depth):
+                return self.evaluationFunction(gameState), ''
                 
-                # Only change node's action if it maximize the evaluation
-                if val != node[0]: 
-                    node = (val, action)
-
-                if node[0] > beta:
-                    # Prunning
-                    return node
-                alpha = max(node[0], alpha)
-
+            elif agentIndex == 0:
+                # Want to maxize Pacman (evalScore the hight the better)
+                node = maxValue(gameState, agentIndex, depth, alpha, beta)
+            else:
+                #Minimize the ghosts actions
+                node = minValue(gameState, agentIndex, depth, alpha, beta)
             return node
+       
+        def minValue(gameState, agentIndex, depth, alpha, beta):
+            val = math.inf
+            act = ''
 
-        # Minimaze ghosts actions
-        def minValue(gameState, agentIndex,depth, alpha, beta):
-            # GameOver or at the current depth
-            if gameState.isWin() or gameState.isLose():
-                return self.evaluationFunction(gameState), ''
-            
-            # (miximized eval, corresponding action)
-            node = (math.inf, '')
-            #Loop through all legal action of ghosts
             for action in gameState.getLegalActions(agentIndex):
-                # Do every ghost agent on the cur depth
-                if agentIndex + 1 != gameState.getNumAgents():
-                    val = min(node[0],minValue(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth,  alpha, beta)[0])
-                else: # Once recursion is made on every agent
-                    # Start recursion on pacman agent into another depth
-                    val = min(node[0],maxValue(gameState.generateSuccessor(agentIndex, action), 0, depth + 1, alpha, beta)[0])
+                if agentIndex == gameState.getNumAgents() - 1:
+                    # Recursed in All agent. Back to pacman in new depth
+                    node = alphaBeta(gameState.generateSuccessor(agentIndex, action), 0, depth + 1, alpha, beta)
+                else:
+                    # Recurse in next ghost 
+                    node = alphaBeta(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth, alpha, beta)
 
-                # Only change node's action if minimize the evaluation
-                if val != node[0]:
-                    node = (val, action)
-
+                # Find action that minimize val
+                if val > node[0]:
+                    val = node[0]
+                    act = action
+                
                 if node[0] < alpha:
                     # Prunning
-                    return node
+                    return val, act
                 beta = min(node[0], beta)
 
-            return node
+            return val, act
+
+        def maxValue(gameState, agentIndex, depth, alpha, beta):
+            val = -math.inf
+            act = ''
+
+            for action in gameState.getLegalActions(agentIndex):
+                if agentIndex == gameState.getNumAgents() - 1:
+                    # Recursed in All agent. Back to pacman in new depth
+                    node = alphaBeta(gameState.generateSuccessor(agentIndex, action), 0, depth + 1, alpha, beta)
+                else:
+                    # Recurse in next ghost 
+                    node = alphaBeta(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth, alpha, beta)
+
+                # Find action that maximize val
+                if val < node[0]:
+                    val = node[0]
+                    act = action
+                
+                if node[0] > beta:
+                    # Prunning
+                    return val, act 
+                alpha = max(node[0], alpha)
+            return val, act          
         
-        def alphaBeta(gameState):
-            node = maxValue(gameState, 0, 0, -math.inf, math.inf)
-            return node[1] # Return action
-        
-        return alphaBeta(gameState)
+        return alphaBeta(gameState, agentIndex=0, depth=0,alpha=-math.inf, beta=math.inf)[1]
 
 
 
@@ -300,51 +316,57 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
 
         "*** YOUR CODE HERE ***"
-        
-        # ExpectiMax only look at maxValue but not minValue
-        # Maximizing pacman actions (Higher the evaluation the better)
-        def maxValue(gamestate, depth, agentIndex):
-            # GameOver or at the current depth
-            if gamestate.isWin() or gamestate.isLose() or (depth == self.depth):
-                return self.evaluationFunction(gamestate)
- 
+        def baseCase(gameState, depth):
+            # Base Case - Game is Over or reached max depth
+            # Stop recursion if any is true
+            return gameState.isWin() or gameState.isLose() or (depth == self.depth)  
+
+        def expectiMax(gameState, agentIndex, depth):
+            if baseCase(gameState, depth):
+                return self.evaluationFunction(gameState), ''
+                
+            elif agentIndex == 0:
+                # Want to maxize Pacman (evalScore the hight the better)
+                node = maxValue(gameState, agentIndex, depth)
+            else:
+                # specificity of expectiminimax
+                node = helper(gameState, agentIndex, depth)
+            return node
+
+        def helper(gameState, agentIndex, depth):
+            prob = 0
+            fraction = 1/len(gameState.getLegalActions(agentIndex))
+            act = ''
+
+            for action in gameState.getLegalActions(agentIndex):
+                if agentIndex == gameState.getNumAgents() - 1:
+                    # Recursed in All agent. Back to pacman in new depth
+                    prob += fraction * expectiMax(gameState.generateSuccessor(agentIndex, action), 0, depth + 1)[0]
+                else:
+                    # Recurse in next ghost 
+                    prob += fraction * expectiMax(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth)[0]
+
+            return prob, act
+
+        def maxValue(gameState, agentIndex, depth):
             val = -math.inf
-            #Loop through all legal action of pacman
-            for action in gamestate.getLegalActions(0):
-                val =  max(val, expectimax(gamestate.generateSuccessor(0,action), depth, 1))
-            return val
-        
+            act = ''
 
-        def expectimax(gamestate, depth, agentIndex):
-            # GameOver or at the current depth
-            if gamestate.isWin() or gamestate.isLose() or (depth == self.depth):
-                return self.evaluationFunction(gamestate)
+            for action in gameState.getLegalActions(agentIndex):
+                if agentIndex == gameState.getNumAgents() - 1:
+                    # Recursed in All agent. Back to pacman in new depth
+                    node = expectiMax(gameState.generateSuccessor(agentIndex, action), 0, depth + 1)
+                else:
+                    # Recurse in next ghost 
+                    node = expectiMax(gameState.generateSuccessor(agentIndex, action), agentIndex + 1, depth)
+
+                # Find action that maximize val
+                if val < node[0]:
+                    val = node[0]
+                    act = action
+            return val, act
             
-            # specificity of expectiminimax
-            chance = 0
-            probAction = 1 / len(gamestate.getLegalActions(agentIndex))
-
-            if agentIndex+1 != gamestate.getNumAgents():
-                for action in gamestate.getLegalActions(agentIndex):
-                     # Start recursion on different agent into same depth
-                    chance += probAction * expectimax(gamestate.generateSuccessor(agentIndex, action), depth, agentIndex + 1)
-            else: # Once recursion is made on every agent
-                # Start recursion on pacman agent into another depth
-                for action in gamestate.getLegalActions(agentIndex):
-                    chance += probAction * maxValue(gamestate.generateSuccessor(agentIndex, action), depth + 1, 0)
-
-            return chance
-        
-        def findAction(gameState):
-            optAction = ''
-            p_val = -math.inf
-            for action in gameState.getLegalActions():
-                if expectimax(gameState.generateSuccessor(0, action), 0, 1) > p_val:
-                    p_val = expectimax(gameState.generateSuccessor(0, action), 0, 1)
-                    optAction = action
-            return optAction   
-
-        return findAction(gameState)     
+        return expectiMax(gameState, agentIndex=0, depth=0)[1]  
 
 
 def betterEvaluationFunction(currentGameState):
